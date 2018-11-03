@@ -1,12 +1,10 @@
 #define DISABLEAVRMIN
 #include <Pokitto.h>
 
-#include "TextEditor.h"
-#include "DummyKeyboard.h"
-#include "CommandPipe.h"
+#include "KeyboardSystem.h"
 
-TextEditor editor;
-DummyKeyboard keyboard;
+TextEditor<char> editor;
+DummyKeyboard<char32_t> keyboard;
 
 int main ()
 {
@@ -16,7 +14,7 @@ int main ()
 
 	Core::begin();
 
-	auto pipe = CommandPipe(keyboard, editor);
+	auto pipe = CommandConversionPipe<char32_t, char>(keyboard, editor);
 
 	while (Core::isRunning())
 	{
