@@ -9,86 +9,72 @@
 #include "../CommandInputStream.h"
 
 template< typename CharT >
-class DummyKeyboard : public CommandInputStream<CharT>
+class DummyKeyboard
 {
 public:
 	using char_type = CharT;
 	using command_type = KeyboardCommand<CharT>;
+	using output_stream_type = CommandOutputStream<CharT>;
 
 private:
-	std::array<command_type, 8> buffer;
-	std::size_t next = 0;
-
-	void push(command_type c)
-	{
-		if(this->next == this->buffer.size())
-			return;
-
-		this->buffer[this->next] = c;
-		++this->next;
-	}
+	output_stream_type * outputStream = nullptr;
 
 public:
-	std::size_t getCommandsPending(void) const override
+	DummyKeyboard(void) = default;
+
+	DummyKeyboard(output_stream_type & outputStream)
+		: outputStream(&outputStream)
 	{
-		return this->next;
 	}
 
-	bool hasCommandsPending(void) const override
+	const output_stream_type * getOutput(void) const
 	{
-		return (this->next > 0);
-	}
-	
-	command_type peekCommand(void) const override
-	{
-		if(this->next == 0)
-			return command_type();
-
-		return this->buffer[this->next - 1];
+		return this->outputStream;
 	}
 
-	command_type readCommand(void) override
+	void setOutput(output_stream_type & outputStream)
 	{
-		if(this->next == 0)
-			return command_type();
-
-		--this->next;
-		return this->buffer[this->next];
+		this->outputStream = &outputStream;
 	}
 
 	void update(void)
 	{
 		using Pokitto::Buttons;
 
+		if(outputStream == nullptr)
+			return;
+
+		if(!outputStream->canWrite())
+			return;
+
 		if(Buttons::pressed(BTN_A))
 		{
-			//this->push(command_type(static_cast<char32_t>(static_cast<char>('A'))));
-			this->push(command_type(KeyboardCommandType::Char, 'A'));
+			this->outputStream->writeCommand(command_type(KeyboardCommandType::Char, 'A'));
 		}
 
 		if(Buttons::pressed(BTN_B))
 		{
-			this->push(command_type(KeyboardCommandType::Backspace));
+			this->outputStream->writeCommand(command_type(KeyboardCommandType::Backspace));
 		}
 
 		if(Buttons::pressed(BTN_UP))
 		{
-			this->push(command_type(KeyboardCommandType::ArrowUp));
+			this->outputStream->writeCommand(command_type(KeyboardCommandType::ArrowUp));
 		}
 
 		if(Buttons::pressed(BTN_DOWN))
 		{
-			this->push(command_type(KeyboardCommandType::ArrowDown));
+			this->outputStream->writeCommand(command_type(KeyboardCommandType::ArrowDown));
 		}
 
 		if(Buttons::pressed(BTN_LEFT))
 		{
-			this->push(command_type(KeyboardCommandType::ArrowLeft));
+			this->outputStream->writeCommand(command_type(KeyboardCommandType::ArrowLeft));
 		}
 
 		if(Buttons::pressed(BTN_RIGHT))
 		{
-			this->push(command_type(KeyboardCommandType::ArrowRight));
+			this->outputStream->writeCommand(command_type(KeyboardCommandType::ArrowRight));
 		}
 	}
 };

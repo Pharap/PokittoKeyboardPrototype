@@ -12,23 +12,24 @@ public:
 	using command_type = KeyboardCommand<CharT>;
 
 public:
-	virtual std::size_t getCommandsPending(void) const = 0;
+	virtual std::size_t getWritesPending(void) const
+	{
+		return 0;
+	}
 	
-	virtual void emitCommand(command_type command) = 0;
+	virtual bool hasWritesPending(void) const
+	{
+		return (this->getWritesPending() > 0);
+	}
+
+	virtual bool canWrite(void) const
+	{
+		return true;
+	}
+	
+	virtual void writeCommand(command_type command) = 0;
 	
 	virtual void flush(void)
 	{
 	}
-	
-	virtual bool hasCommandsPending(void) const
-	{
-		return (this->getCommandsPending() > 0);
-	}
 };
-
-using BasicCommandOutputStream = CommandOutputStream<char>;
-using WideCommandOutputStream = CommandOutputStream<wchar_t>;
-using UTF16CommandOutputStream = CommandOutputStream<char32_t>;
-using UTF32CommandOutputStream = CommandOutputStream<char32_t>;
-
-using CommonCommandOutputStream = UTF32CommandOutputStream;

@@ -4,76 +4,108 @@
 
 #include "../Grid.h"
 #include "../KeyboardCommand.h"
-#include "../CommandOutputStream.h"
+#include "../CommandInputStream.h"
 #include "../CursorPosition.h"
 
-template< typename CharT >
-class TextEditor : public CommandOutputStream<CharT>
+template< typename CharT, std::size_t Width, std::size_t Height >
+class TextEditor
 {
+public:
+	static constexpr std::size_t width = Width;
+	static constexpr std::size_t height = Height;
+
 public:
 	using char_type = CharT;
 	using command_type = KeyboardCommand<CharT>;
+	using input_stream_type = CommandInputStream<CharT>;
+	using grid_type = Grid<CharT, width, height>;
 
 private:
-	using TextGrid = Grid<CharT, 24, 12>;
-
-private:
-	TextGrid text;
-	CursorPosition cursor = CursorPosition(0, 0);
+	grid_type grid;
+	CursorPosition cursor;
+	input_stream_type * inputStream = nullptr;
 
 public:
-	std::size_t getCommandsPending(void) const override
+	TextEditor(void) = default;
+
+	TextEditor(input_stream_type & inputStream)
+		: inputStream(&inputStream)
 	{
-		return 0;
 	}
 
-	bool hasCommandsPending(void) const override
+	grid_type & getGrid(void)
 	{
-		return false;
+		return this->grid;
 	}
-	
-	void emitCommand(command_type command) override
+
+	const grid_type & getGrid(void) const
+	{
+		return this->grid;
+	}
+
+	const input_stream_type * getInput(void) const
+	{
+		return this->inputStream;
+	}
+
+	void setInput(input_stream_type & inputStream)
+	{
+		this->inputStream = &inputStream;
+	}
+
+	void update(void)
+	{
+		if(this->inputStream != nullptr)
+			while(inputStream->hasReadsPending())
+			{
+				const auto command = inputStream->readCommand();
+				this->handleCommand(command);
+			}
+	}
+
+	void draw(int x, int y)
+	{
+		using Pokitto::Display;
+
+		for(std::size_t j = 0; j < this->grid.getHeight(); ++j)
+		{
+			for(std::size_t i = 0; i < this->grid.getWidth(); ++i)
+			{
+				const auto c = this->grid.get(i, j);
+				Display::print_char(x + (i * Display::fontWidth), y + (j * Display::fontHeight), c);
+			}
+		}
+
+		//Display::drawRectangle(x - 2 + (this->cursor.x * Display::fontWidth), y + (this->cursor.y * Display::fontHeight), Display::fontWidth, Display::fontHeight);
+		Display::drawFastVLine(x + (this->cursor.x * Display::fontWidth), y + (this->cursor.y * Display::fontHeight), Display::fontHeight);
+	}
+
+private:
+	void handleCommand(command_type command)
 	{
 		switch(command.type)
 		{
 			case KeyboardCommandType::None:
 				break;
 			case KeyboardCommandType::Char:
-				this->text.set(this->cursor.x, this->cursor.y, command.character);
-
-				++this->cursor.x;
-				if(this->cursor.x == text.getWidth())
-				{
-					this->cursor.x = 0;
-					++this->cursor.y;
-				}
+				this->insertChar(command.character);
+				this->advanceCursor();
 				break;
 			case KeyboardCommandType::ArrowUp:
-				if(this->cursor.y > 0)
-					--this->cursor.y;
+				this->moveCursorUp();
 				break;
 			case KeyboardCommandType::ArrowDown:
-				if(this->cursor.y < (this->text.getHeight() - 1))
-					++this->cursor.y;
+				this->moveCursorDown();
 				break;
 			case KeyboardCommandType::ArrowLeft:
-				if(this->cursor.x > 0)
-					--this->cursor.x;
+				this->moveCursorLeft();
 				break;
 			case KeyboardCommandType::ArrowRight:
-				if(this->cursor.x < (this->text.getWidth() - 1))
-					++this->cursor.x;
+				this->moveCursorRight();
 				break;
 			case KeyboardCommandType::Backspace:
-				if(this->cursor.x > 0)
-					--this->cursor.x;
-				else
-				{
-					this->cursor.x = 0;
-					if(this->cursor.y > 0)
-						--this->cursor.y;
-				}
-				this->text.set(this->cursor.x, this->cursor.y, ' ');
+				this->reatreatCursor();
+				this->insertChar('\0');
 				break;
 			case KeyboardCommandType::Enter:
 				break;
@@ -92,9 +124,10 @@ public:
 			case KeyboardCommandType::Delete:
 				break;
 			case KeyboardCommandType::Home:
-				this->cursor.x = 0;
+				this->moveCursorToLineStart();
 				break;
 			case KeyboardCommandType::End:
+				this->moveCursorToLineEnd();
 				break;
 			case KeyboardCommandType::PageUp:
 				break;
@@ -126,21 +159,95 @@ public:
 				break;
 		}
 	}
-
-	void draw(int x, int y)
+	
+	bool canMoveCursorUp(void) const
 	{
-		using Pokitto::Display;
+		return (this->cursor.y > this->grid.getFirstY());
+	}
 
-		for(std::size_t j = 0; j < this->text.getHeight(); ++j)
+	void moveCursorUp(void)
+	{
+		if(this->canMoveCursorUp())
+			--this->cursor.y;
+	}
+
+	bool canMoveCursorDown(void) const
+	{
+		return (this->cursor.y < this->grid.getLastY());
+	}
+
+	void moveCursorDown(void)
+	{
+		if(this->canMoveCursorDown())
+			++this->cursor.y;
+	}
+	
+	bool canMoveCursorRight(void) const
+	{
+		return (this->cursor.x < this->grid.getLastX());
+	}
+
+	void moveCursorRight(void)
+	{
+		if(this->canMoveCursorRight())
+			++this->cursor.x;
+	}
+
+	bool canMoveCursorLeft(void) const
+	{
+		return (this->cursor.x > this->grid.getFirstX());
+	}
+
+	void moveCursorLeft(void)
+	{
+		if(this->canMoveCursorLeft())
+			--this->cursor.x;
+	}
+
+	void insertChar(char_type character)
+	{
+		this->grid.set(this->cursor.x, this->cursor.y, character);
+	}
+
+	void overwriteChar(char_type character)
+	{
+		this->advanceCursor();
+		this->insertChar(character);
+	}
+
+	void moveCursorToLineStart(void)
+	{
+		this->cursor.x = this->grid.getFirstX();
+	}
+
+	void moveCursorToLineEnd(void)
+	{
+		this->cursor.x = this->grid.getLastX();
+	}
+
+	void advanceCursor(void)
+	{
+		if(this->canMoveCursorRight())
 		{
-			for(std::size_t i = 0; i < this->text.getWidth(); ++i)
-			{
-				const auto c = this->text.get(i, j);
-				Display::print_char(x + (i * Display::fontWidth), y + (j * Display::fontHeight), c);
-			}
+			++this->cursor.x;
 		}
+		else if(this->canMoveCursorDown())
+		{
+			this->cursor.x = this->grid.getFirstX();
+			++this->cursor.y;
+		}
+	}
 
-		//Display::drawRectangle(x - 2 + (this->cursor.x * Display::fontWidth), y + (this->cursor.y * Display::fontHeight), Display::fontWidth, Display::fontHeight);
-		Display::drawFastVLine(x + (this->cursor.x * Display::fontWidth), y + (this->cursor.y * Display::fontHeight), Display::fontHeight);
+	void reatreatCursor(void)
+	{
+		if(this->canMoveCursorLeft())
+		{
+			--this->cursor.x;
+		}
+		else if(this->canMoveCursorUp())
+		{
+			this->cursor.x = this->grid.getLastX();
+			--this->cursor.y;
+		}
 	}
 };

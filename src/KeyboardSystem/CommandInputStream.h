@@ -12,20 +12,25 @@ public:
 	using command_type = KeyboardCommand<CharT>;
 
 public:
-	virtual std::size_t getCommandsPending(void) const = 0;
+	virtual std::size_t getReadsPending(void) const = 0;
+	
+	virtual bool hasReadsPending(void) const
+	{
+		return (this->getReadsPending() > 0);
+	}
+
+	virtual bool canRead(void) const
+	{
+		return this->hasReadsPending();
+	}
 	
 	virtual command_type peekCommand(void) const = 0;
-	virtual command_type readCommand(void) = 0;
-	
-	virtual bool hasCommandsPending(void) const
+
+	virtual void dropCommand(void) = 0;
+
+	virtual command_type readCommand(void)
 	{
-		return (this->getCommandsPending() > 0);
+		const auto result = this->peekCommand();
+		this->dropCommand();
 	}
 };
-
-using BasicCommandInputStream = CommandInputStream<char>;
-using WideCommandInputStream = CommandInputStream<wchar_t>;
-using UTF16CommandInputStream = CommandInputStream<char32_t>;
-using UTF32CommandInputStream = CommandInputStream<char32_t>;
-
-using CommonCommandInputStream = UTF32CommandInputStream;

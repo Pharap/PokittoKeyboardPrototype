@@ -33,10 +33,3 @@ struct KeyboardCommand
 		return KeyboardCommand<OtherCharT>(this->type, static_cast<char_type>(this->character));
 	}
 };
-
-using BasicCommand = KeyboardCommand<char>;
-using WideCommand = KeyboardCommand<wchar_t>;
-using UTF16Command = KeyboardCommand<char32_t>;
-using UTF32Command = KeyboardCommand<char32_t>;
-
-using CommonCommand = UTF32Command;
