@@ -9,7 +9,7 @@
 #include "KeyboardCommand.h"
 #include "CommandInputStream.h"
 
-class DummyKeyboard : public CommandInputStream
+/*class GridKeyboard : public CommandInputStream
 {
 private:
 	std::array<KeyboardCommand, 8> buffer;
@@ -51,40 +51,4 @@ public:
 		--this->next;
 		return this->buffer[this->next];
 	}
-
-	void update(void)
-	{
-		using Pokitto::Buttons;
-
-		if(Buttons::pressed(BTN_A))
-		{
-			//this->push(KeyboardCommand(static_cast<char32_t>(static_cast<char>('A'))));
-			this->push(KeyboardCommand(KeyboardCommandType::Char, 'A'));
-		}
-
-		if(Buttons::pressed(BTN_B))
-		{
-			this->push(KeyboardCommand(KeyboardCommandType::Backspace));
-		}
-
-		if(Buttons::pressed(BTN_UP))
-		{
-			this->push(KeyboardCommand(KeyboardCommandType::ArrowUp));
-		}
-
-		if(Buttons::pressed(BTN_DOWN))
-		{
-			this->push(KeyboardCommand(KeyboardCommandType::ArrowDown));
-		}
-
-		if(Buttons::pressed(BTN_LEFT))
-		{
-			this->push(KeyboardCommand(KeyboardCommandType::ArrowLeft));
-		}
-
-		if(Buttons::pressed(BTN_RIGHT))
-		{
-			this->push(KeyboardCommand(KeyboardCommandType::ArrowRight));
-		}
-	}
-};
+}*/

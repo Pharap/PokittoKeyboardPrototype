@@ -2,15 +2,20 @@
 
 #include <Pokitto.h>
 
-#include "Grid.h"
-#include "CursorPosition.h"
-#include "KeyboardCommand.h"
-#include "CommandOutputStream.h"
+#include "../Grid.h"
+#include "../KeyboardCommand.h"
+#include "../CommandOutputStream.h"
+#include "../CursorPosition.h"
 
-class TextEditor : public CommandOutputStream
+template< typename CharT >
+class TextEditor : public CommandOutputStream<CharT>
 {
+public:
+	using char_type = CharT;
+	using command_type = KeyboardCommand<CharT>;
+
 private:
-	using TextGrid = Grid<char, 24, 12>;
+	using TextGrid = Grid<CharT, 24, 12>;
 
 private:
 	TextGrid text;
@@ -27,14 +32,14 @@ public:
 		return false;
 	}
 	
-	void emitCommand(KeyboardCommand command) override
+	void emitCommand(command_type command) override
 	{
 		switch(command.type)
 		{
 			case KeyboardCommandType::None:
 				break;
 			case KeyboardCommandType::Char:
-				this->text.set(this->cursor.x, this->cursor.y, static_cast<char>(command.character));
+				this->text.set(this->cursor.x, this->cursor.y, command.character);
 
 				++this->cursor.x;
 				if(this->cursor.x == text.getWidth())

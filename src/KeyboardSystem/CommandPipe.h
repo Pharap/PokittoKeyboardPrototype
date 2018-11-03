@@ -4,26 +4,33 @@
 #include "CommandInputStream.h"
 #include "CommandOutputStream.h"
 
+template< typename CharT >
 class CommandPipe
 {
+public:
+	using char_type = CharT;
+	using command_type = KeyboardCommand<CharT>;
+	using input_stream_type = CommandInputStream<CharT>;
+	using output_stream_type = CommandOutputStream<CharT>;
+
 private:
-	CommandInputStream * input = nullptr;
-	CommandOutputStream * output = nullptr;
+	input_stream_type * input = nullptr;
+	output_stream_type * output = nullptr;
 
 public:
 	constexpr CommandPipe(void) = default;
 
-	constexpr CommandPipe(CommandInputStream & input)
+	constexpr CommandPipe(input_stream_type & input)
 		: input(&input), output(nullptr)
 	{
 	}
 
-	constexpr CommandPipe(CommandOutputStream & output)
+	constexpr CommandPipe(output_stream_type & output)
 		: input(nullptr), output(&output)
 	{
 	}
 
-	constexpr CommandPipe(CommandInputStream & input, CommandOutputStream & output)
+	constexpr CommandPipe(input_stream_type & input, output_stream_type & output)
 		: input(&input), output(&output)
 	{
 	}
@@ -39,13 +46,14 @@ public:
 					auto command = input->readCommand();
 					output->emitCommand(command);
 				}
+
 				while(output->hasCommandsPending())
 					output->flush();
 			}
 			else
 			{
 				while(input->hasCommandsPending())
-					auto command = input->readCommand();
+					(void)input->readCommand();
 			}
 		}
 	}
